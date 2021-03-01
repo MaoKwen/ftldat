@@ -20,7 +20,7 @@ import os
 def ftl_path_split(path):
     """ Split a path in the way FTL expects them to be in .dat files.
         That is: the UNIX way. """
-    return path.split('/')
+    return str(path, 'utf-8').split('/')
 
 def ftl_path_join(*args):
     """ Joins paths in the way FTL expects them to be in .dat files.
@@ -159,7 +159,7 @@ class FTLPack(object):
                              # end of the file
 
         # Open the file
-        if isinstance(filename_or_fileobj, basestring):
+        if isinstance(filename_or_fileobj, str):
             if create:
                 self.f = open(filename_or_fileobj, 'wb+')
             else:
@@ -188,7 +188,7 @@ class FTLPack(object):
         # Write to file
         self.f.seek(0, 0)
         self.f.write(struct.pack('<L', index_size))
-        for n in xrange(index_size):
+        for n in range(index_size):
             self.f.write(struct.pack('<L', 0))
     def _read_index(self):
         """ Reads (or re-reads) the index from the file. """
@@ -201,7 +201,7 @@ class FTLPack(object):
         self.filenames = {}
         self.index_free = []
         # Read the index
-        for n in xrange(index_size):
+        for n in range(index_size):
             self.index[n] = struct.unpack('<L', self.f.read(4))[0]
         # Read the metadata
         for n, offset in enumerate(self.index):
@@ -250,7 +250,7 @@ class FTLPack(object):
         while True:
             # For how many new free entries is there space after the index and
             # before the first file?
-            index_used = [n for n in xrange(len(self.index)) if self.index[n]]
+            index_used = [n for n in range(len(self.index)) if self.index[n]]
             if not index_used:
                 # There is no file after the index, we can grow with as much
                 # as we like.  Limit ourselves to amount.
@@ -263,22 +263,22 @@ class FTLPack(object):
             # If it is not enough, move the first file and check again
             self._move_to_eof(n)
         # Update state
-        self.index_free.extend(xrange(len(self.index) + free_room - 1,
+        self.index_free.extend(range(len(self.index) + free_room - 1,
                                 len(self.index) - 1, -1))
-        for n in xrange(free_room):
+        for n in range(free_room):
             self.index.append(0)
             self.metadata.append(None)
         # And write to the file
         self.f.seek(0, 0)
         self.f.write(struct.pack('<L', len(self.index)))
         self.f.seek((len(self.index) - free_room)*4+4, 0)
-        for n in xrange(free_room):
+        for n in range(free_room):
             self.f.write(struct.pack('<L', 0))
     #
     # Base interface functions
     #
     def list(self):
-        return self.filenames.iterkeys()
+        return self.filenames.keys()
     def list_sizes(self):
         for filename, n in self.filenames.iteritems():
             yield (filename, self.metadata[n].size)
@@ -369,7 +369,7 @@ class FTLPack(object):
                         for n, addr in enumerate(self.index) if addr]
         entries.sort(key=lambda x: x.old_offset)
         # Check for overlap
-        for i in xrange(len(entries) - 1):
+        for i in range(len(entries) - 1):
             if (entries[i].old_offset + entries[i].size
                     > entries[i+1].old_offset):
                 raise FTLDatError("Cannot repack datfile with overlapping "+
@@ -443,7 +443,7 @@ class Program(object):
     def cmd_list(self):
         pack = FTLPack(self.args.datfile)
         for filename in pack.list():
-            print filename
+            print(filename)
     def cmd_hashes(self):
         pack = FTLPack(self.args.datfile)
         hashes = {}
@@ -456,26 +456,26 @@ class Program(object):
         # Then sort and display
         filenames.sort()
         for filename in filenames:
-            print '%s %s' % (filename, hashes[filename])
+            print('%s %s' % (filename, hashes[filename]))
     def cmd_info(self):
-        print 'Loading index ...'
+        print('Loading index ...')
         pack = FTLPack(self.args.datfile)
-        print 
-        print "%-4s %-7s %-57s%10s" % ('#', 'offset', 'filename', 'size')
+        print()
+        print("%-4s %-7s %-57s%10s" % ('#', 'offset', 'filename', 'size'))
         N = 0
         c_size = 0
         for i, filename, size, offset in pack.list_metadata():
-            print "%-4s %-7s %-57s%10s" % (i, hex(offset)[2:], filename,
-                            str(size) if self.args.bytes else nice_size(size))
+            print( "%-4s %-7s %-57s%10s" % (i, hex(offset)[2:], filename,
+                            str(size) if self.args.bytes else nice_size(size)))
             if self.args.hashes:
                 hf = HashFile()
                 pack.extract_to(filename, hf)
-                print "        md5: %s" % hf.finish_up()
+                print ("        md5: %s" % hf.finish_up())
             c_size += size
             N += 1
-        print
-        print '  %s/%s entries' % (N, len(pack.index))
-        print '  %s' % str(c_size) if self.args.bytes else nice_size(c_size)
+        print()
+        print ('  %s/%s entries' % (N, len(pack.index)))
+        print ('  %s' % str(c_size) if self.args.bytes else nice_size(c_size))
     def cmd_pack(self):
         if os.path.exists(self.args.datfile) and not self.args.force:
             print ('ERROR %s already exists. Use -f to override.'
@@ -483,23 +483,23 @@ class Program(object):
             return -2
         if self.args.folder is None:
             self.args.folder = self.args.datfile + '-unpacked'
-        print 'Listing files to pack ...'
+        print ('Listing files to pack ...')
         folder = FolderPack(self.args.folder)
         files = list(folder.list_sizes())
         if self.args.indexsize is not None:
             indexSize = max(self.args.indexsize, len(files))
         else:
             indexSize = len(files)
-        print 'Create datfile ...'
+        print ('Create datfile ...')
         pack = FTLPack(self.args.datfile, create=True, index_size=indexSize)
-        print 'Packing ...'
+        print ('Packing ...')
         for _file, size in files:
-            print " %s" % _file
+            print (" %s" % _file)
             pack.add(_file, folder.open(_file), size)
     def cmd_append(self):
         pack = FTLPack(self.args.datfile)
         if not os.path.exists(self.args.appendix):
-            print 'ERROR %s does not exist.' % self.args.appendix
+            print ('ERROR %s does not exist.' % self.args.appendix)
             return -8
         f = None
         try:
@@ -528,7 +528,7 @@ class Program(object):
     def cmd_add(self):
         pack = FTLPack(self.args.datfile)
         if not os.path.exists(self.args.file):
-            print 'ERROR %s does not exist.' % self.args.file
+            print ('ERROR %s does not exist.' % self.args.file)
             return -7
         if self.args.filename is None:
             self.args.filename = ftl_path_join(*ftl_path_split(self.args.file))
@@ -549,7 +549,7 @@ class Program(object):
                     % self.args.target)
             return -4
         if not self.args.filename in pack:
-            print 'ERROR %s does not exist' % self.args.filename
+            print( 'ERROR %s does not exist' % self.args.filename)
             return -5
         try:
             if self.args.target:
@@ -561,18 +561,18 @@ class Program(object):
             if f is not sys.stdout:
                 f.close()
     def cmd_repack(self):
-        print 'Repacking ...'
+        print ('Repacking ...')
         pack = FTLPack(self.args.datfile)
         res = pack.repack()
         print
-        print ' old size      %s (%s)' % (nice_size(res.old_size),
-                                          res.old_size)
-        print ' new size      %s (%s; %s%%)' % (
+        print (' old size      %s (%s)' % (nice_size(res.old_size),
+                                          res.old_size))
+        print (' new size      %s (%s; %s%%)' % (
                             nice_size(res.new_size), res.new_size,
-                        round(100.0 * res.new_size / res.old_size, 1))
-        print ' bytes moved   %s (%s; %s%%)' % (
+                        round(100.0 * res.new_size / res.old_size, 1)))
+        print (' bytes moved   %s (%s; %s%%)' % (
                             nice_size(res.bytes_moved), res.bytes_moved,
-                        round(100.0 * res.bytes_moved / res.new_size, 1))
+                        round(100.0 * res.bytes_moved / res.new_size, 1)))
     def cmd_remove(self):
         pack = FTLPack(self.args.datfile)
         if not self.args.filename in pack:
@@ -585,7 +585,7 @@ class Program(object):
     def cmd_replace(self):
         pack = FTLPack(self.args.datfile)
         if not os.path.exists(self.args.replacement):
-            print 'ERROR %s does not exist.' % self.args.replacement
+            print ('ERROR %s does not exist.' % self.args.replacement)
             return  -10
         size = os.stat(self.args.replacement).st_size
         if not self.args.filename in pack:
@@ -600,15 +600,15 @@ class Program(object):
     def cmd_unpack(self):
         if self.args.folder is None:
             self.args.folder = self.args.datfile + '-unpacked'
-        print 'Loading index ... '
+        print ('Loading index ... ')
         pack = FTLPack(self.args.datfile)
         folder = FolderPack(self.args.folder)
-        print 'Extracting ...'
+        print ('Extracting ...')
         for filename in pack.list():
             if filename in folder and not self.args.force:
-                print 'ERROR %s already exists. Use -f to override.' % filename
+                print ('ERROR %s already exists. Use -f to override.' % filename)
                 return -1
-            print " %s" % filename
+            print (" %s" % filename)
             pack.extract_to(filename, folder.open(filename, 'wb'))
     def main(self):
         self.parse_args()

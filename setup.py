@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
 from setuptools import setup, find_packages
-from get_git_version import get_git_version
 import os, os.path
 
-setup(name='ftldat',
-      version=get_git_version(),
+setup(name='ftldat3',
+      version_config=True,
+      setup_requires=['setuptools-git-versioning'],
       description='CLI tool to pack and unpack FTL .dat files',
       author='Bas Westerbaan',
       author_email='bas@westerbaan.name',
